@@ -5,8 +5,13 @@ import * as path from 'path'
 import { Endpoints } from '@octokit/types'
 import { Octokit } from '@octokit/action'
 
-async function validateRuleset(ruleset: Ruleset): Promise<Boolean> {
-  // Implement your validation logic here
+type Ruleset =
+  Endpoints['GET /orgs/{org}/rulesets/{ruleset_id}']['response']['data']
+type RulesetUpdate =
+  Endpoints['PUT /orgs/{org}/rulesets/{ruleset_id}']['parameters']
+
+async function validateRuleset(ruleset: Ruleset): Promise<boolean> {
+  // Implement validation logic here
   if (ruleset === null) {
     return false
   }
@@ -27,6 +32,10 @@ async function fetchCurrentRuleset(
     }
   )
 
+  if (response.status !== 200) {
+    throw new Error(`Failed to fetch the current ruleset: ${response.status}`)
+  }
+
   return response.data
 }
 async function updateRuleset(
@@ -35,13 +44,13 @@ async function updateRuleset(
   rulesetId: number,
   ruleset: Ruleset
 ): Promise<void> {
+  // An odd fix for a Type issue:
   // Define default conditions with all required properties
+  // and merge default conditions with the ruleset conditions
   const defaultConditions = {
     ref_name: { include: [], exclude: [] },
     repository_property: { include: [], exclude: [] }
   }
-
-  // Merge default conditions with the ruleset conditions
   const conditions = { ...defaultConditions, ...ruleset.conditions }
 
   // Create a new object that matches the expected type
@@ -52,18 +61,18 @@ async function updateRuleset(
     target: ruleset.target,
     enforcement: ruleset.enforcement,
     bypass_actors: ruleset.bypass_actors,
-    conditions: conditions,
+    conditions,
     rules: ruleset.rules
   }
 
-  // Update the ruleset using the new object
-  await octokit.request('PUT /orgs/{org}/rulesets/{ruleset_id}', updateParams)
+  const response = await octokit.request(
+    'PUT /orgs/{org}/rulesets/{ruleset_id}',
+    updateParams
+  )
+  if (response.status !== 200) {
+    throw new Error(`Failed to update the ruleset: ${response.status}`)
+  }
 }
-
-type Ruleset =
-  Endpoints['GET /orgs/{org}/rulesets/{ruleset_id}']['response']['data']
-type RulesetUpdate =
-  Endpoints['PUT /orgs/{org}/rulesets/{ruleset_id}']['parameters']
 
 /**
  * The main function for the action.
@@ -71,7 +80,6 @@ type RulesetUpdate =
  */
 export async function run(): Promise<void> {
   try {
-    // Reading the changed rulset.json file from provided path)
     core.info(`✅ Reading input for the action`)
     const rulesetFilePath: string = core.getInput('ruleset-file-path')
     const token: string = core.getInput('token')
@@ -82,12 +90,11 @@ export async function run(): Promise<void> {
       org = github.context.repo.owner
     }
     const octokit = new Octokit({ auth: token })
-    
+
     core.info(`✅ Reading the ruleset file from the provided path`)
     // Read the ruleset file from the provided path
     const rulesetContent = readFileSync(path.resolve(rulesetFilePath), 'utf-8')
     const localRuleset: Ruleset = JSON.parse(rulesetContent)
-    
 
     core.info(`✅ Validating the ruleset`)
     // Validate the ruleset
@@ -106,17 +113,21 @@ export async function run(): Promise<void> {
       rulesetId
     )
 
-    core.info(`✅ Comparing the current organization ruleset with the proposed ruleset`)
+    core.info(
+      `✅ Comparing the current organization ruleset with the proposed ruleset`
+    )
     // Compare the two rulesets and update the ruleset if they are different
     if (JSON.stringify(localRuleset) !== JSON.stringify(currentRuleset)) {
       core.info(`✅ Updating the organization ruleset`)
       await updateRuleset(octokit, org, rulesetId, localRuleset)
+    } else {
+      core.info(`✅ The organization ruleset is up to date`)
     }
 
-    core.info(`✅ Compleded`)
+    core.info(`✅ Completed`)
   } catch (error) {
     // Fail the workflow run if an error occurs
-    core.error(`🪲 Error has occurred: ${error}`)
+    core.error(`🪲 Error has occurred -> ${error}`)
     if (error instanceof Error) core.setFailed(error.message)
   }
 }

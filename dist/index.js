@@ -60697,7 +60697,7 @@ function getApiBaseUrl() {
 
 
 async function validateRuleset(ruleset) {
-    // Implement your validation logic here
+    // Implement validation logic here
     if (ruleset === null) {
         return false;
     }
@@ -60709,15 +60709,19 @@ async function fetchCurrentRuleset(octokit, org, rulesetId) {
         org,
         ruleset_id: rulesetId
     });
+    if (response.status !== 200) {
+        throw new Error(`Failed to fetch the current ruleset: ${response.status}`);
+    }
     return response.data;
 }
 async function updateRuleset(octokit, org, rulesetId, ruleset) {
+    // An odd fix for a Type issue:
     // Define default conditions with all required properties
+    // and merge default conditions with the ruleset conditions
     const defaultConditions = {
         ref_name: { include: [], exclude: [] },
         repository_property: { include: [], exclude: [] }
     };
-    // Merge default conditions with the ruleset conditions
     const conditions = { ...defaultConditions, ...ruleset.conditions };
     // Create a new object that matches the expected type
     const updateParams = {
@@ -60727,11 +60731,13 @@ async function updateRuleset(octokit, org, rulesetId, ruleset) {
         target: ruleset.target,
         enforcement: ruleset.enforcement,
         bypass_actors: ruleset.bypass_actors,
-        conditions: conditions,
+        conditions,
         rules: ruleset.rules
     };
-    // Update the ruleset using the new object
-    await octokit.request('PUT /orgs/{org}/rulesets/{ruleset_id}', updateParams);
+    const response = await octokit.request('PUT /orgs/{org}/rulesets/{ruleset_id}', updateParams);
+    if (response.status !== 200) {
+        throw new Error(`Failed to update the ruleset: ${response.status}`);
+    }
 }
 /**
  * The main function for the action.
@@ -60739,7 +60745,6 @@ async function updateRuleset(octokit, org, rulesetId, ruleset) {
  */
 async function run() {
     try {
-        // Reading the changed rulset.json file from provided path)
         core.info(`✅ Reading input for the action`);
         const rulesetFilePath = core.getInput('ruleset-file-path');
         const token = core.getInput('token');
@@ -60771,11 +60776,14 @@ async function run() {
             core.info(`✅ Updating the organization ruleset`);
             await updateRuleset(octokit, org, rulesetId, localRuleset);
         }
-        core.info(`✅ Compleded`);
+        else {
+            core.info(`✅ The organization ruleset is up to date`);
+        }
+        core.info(`✅ Completed`);
     }
     catch (error) {
         // Fail the workflow run if an error occurs
-        core.error(`🪲 Error has occurred: ${error}`);
+        core.error(`🪲 Error has occurred -> ${error}`);
         if (error instanceof Error)
             core.setFailed(error.message);
     }
