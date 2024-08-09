@@ -16,6 +16,9 @@ inputs:
   organization:
     description: 'The organization you are managing the ruleset for. (Default will take the residing org)'
     required: false
+  token:
+    description: 'GitHub token that is used to get and update the rulesets via the API.'
+    required: true
 
 # Define your outputs here.
 outputs:

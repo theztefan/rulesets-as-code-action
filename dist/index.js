@@ -60739,35 +60739,43 @@ async function updateRuleset(octokit, org, rulesetId, ruleset) {
  */
 async function run() {
     try {
-        // Reading the changed rulset.json file from provided path
+        // Reading the changed rulset.json file from provided path)
+        core.info(`✅ Reading input for the action`);
         const rulesetFilePath = core.getInput('ruleset-file-path');
-        const token = core.getInput('github-token');
+        const token = core.getInput('token');
+        core.setSecret(token);
         let org = core.getInput('organization');
         // if the org is empty then take the org from where the workflow is trigged
         if (org === '') {
             org = github.context.repo.owner;
         }
         const octokit = new dist_bundle_Octokit({ auth: token });
+        core.info(`✅ Reading the ruleset file from the provided path`);
         // Read the ruleset file from the provided path
         const rulesetContent = (0,external_fs_.readFileSync)(external_path_.resolve(rulesetFilePath), 'utf-8');
         const localRuleset = JSON.parse(rulesetContent);
+        core.info(`✅ Validating the ruleset`);
         // Validate the ruleset
         // throw an error if the ruleset is invalid and fail the workflow
         if (!(await validateRuleset(localRuleset))) {
             core.setFailed('Invalid ruleset');
             throw new Error('Invalid ruleset');
         }
+        core.info(`✅ Fetching the current ruleset from the REST API`);
         // Fetch the current ruleset from the REST API
         const rulesetId = localRuleset.id;
         const currentRuleset = await fetchCurrentRuleset(octokit, org, rulesetId);
+        core.info(`✅ Comparing the current organization ruleset with the proposed ruleset`);
         // Compare the two rulesets and update the ruleset if they are different
         if (JSON.stringify(localRuleset) !== JSON.stringify(currentRuleset)) {
+            core.info(`✅ Updating the organization ruleset`);
             await updateRuleset(octokit, org, rulesetId, localRuleset);
         }
-        core.setOutput('time', new Date().toTimeString());
+        core.info(`✅ Compleded`);
     }
     catch (error) {
         // Fail the workflow run if an error occurs
+        core.error(`🪲 Error has occurred: ${error}`);
         if (error instanceof Error)
             core.setFailed(error.message);
     }
