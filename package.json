@@ -66,7 +66,10 @@
     ]
   },
   "dependencies": {
-    "@actions/core": "^1.10.1"
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0",
+    "@octokit/action": "^7.0.0",
+    "@octokit/types": "^13.5.0"
   },
   "devDependencies": {
     "@jest/globals": "^29.7.0",
@@ -86,5 +89,6 @@
     "prettier-eslint": "^16.3.0",
     "ts-jest": "^29.2.4",
     "typescript": "^5.5.4"
-  }
+  },
+  "type": "module"
 }

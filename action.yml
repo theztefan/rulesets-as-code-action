@@ -9,10 +9,13 @@ branding:
 
 # Define your inputs here.
 inputs:
-  milliseconds:
+  ruleset-file-path:
     description: 'Your input description here'
     required: true
-    default: '1000'
+    default: 'ruleset.json'
+  organization:
+    description: 'The organization you are managing the ruleset for. (Default will take the residing org)'
+    required: false
 
 # Define your outputs here.
 outputs:
