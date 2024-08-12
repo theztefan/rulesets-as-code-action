@@ -1,16 +1,16 @@
 {
-  "name": "typescript-action",
-  "description": "GitHub Actions TypeScript template",
-  "version": "0.0.0",
-  "author": "",
+  "name": "rulesets-as-code-action",
+  "description": "GitHub Action to manage GitHub Rulesets as code.",
+  "version": "1.0.0",
+  "author": "@theztefan",
   "private": true,
-  "homepage": "https://github.com/actions/typescript-action",
+  "homepage": "https://github.com/theztefan/rulesets-as-code-action",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/theztefan/rulesets-as-code-action.git"
   },
   "bugs": {
-    "url": "https://github.com/actions/typescript-action/issues"
+    "url": "https://github.com/theztefan/rulesets-as-code-action/issues"
   },
   "keywords": [
     "actions",
