@@ -11,6 +11,12 @@ To update the organization the Action will use the available REST APIs:
 - [Get an organization repository ruleset](https://docs.github.com/en/rest/orgs/rules?apiVersion=2022-11-28#get-an-organization-repository-ruleset)
 - [Update an organization repository rules](https://docs.github.com/en/rest/orgs/rules?apiVersion=2022-11-28#update-an-organization-repository-ruleset)
 
+## Inputs
+
+- `ruleset-file-path`: Path to the local ruleset file.
+- `token`: GitHub token for authentication.
+- `organization`: GitHub organization name (optional).
+
 ## Usage
 
 The idea is to run this action in a central Rulset governing reporsitory for
@@ -45,5 +51,5 @@ jobs:
         with:
           ruleset-file-path: 'ruleset.json'
           token: ${{ steps.app-token.outputs.token }}
-          organization: 'theztefan-enterprise-test'
+          organization: 'your-organization'
 ```
