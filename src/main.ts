@@ -38,6 +38,28 @@ async function fetchCurrentRuleset(
 
   return response.data
 }
+
+// Type guard for repository_name condition
+function hasRepositoryNameCondition(
+  conditions: any
+): conditions is { repository_name: any } {
+  return conditions && conditions.repository_name !== undefined
+}
+
+// Type guard for repository_id condition
+function hasRepositoryIdCondition(
+  conditions: any
+): conditions is { repository_id: any } {
+  return conditions && conditions.repository_id !== undefined
+}
+
+// Type guard for repository_property condition
+function hasRepositoryPropertyCondition(
+  conditions: any
+): conditions is { repository_property: any } {
+  return conditions && conditions.repository_property !== undefined
+}
+
 async function updateRuleset(
   octokit: Octokit,
   org: string,
@@ -47,31 +69,45 @@ async function updateRuleset(
   // An odd fix for a Type issue:
   // Define default conditions with all required properties
   // and merge default conditions with the ruleset conditions
-  const defaultConditions = {
-    ref_name: { include: [], exclude: [] },
-    repository_property: { include: [], exclude: [] },
-    repository_name: { include: [], exclude: [] },
-    repository_id: { repository_ids: [] }
-  }
-  const conditions = { ...defaultConditions, ...ruleset.conditions }
+  // Dynamically build conditions only if they exist in ruleset.conditions
+  // Initialize conditions object based on ruleset.conditions
+  const conditions: any = {}
 
-  // Ensure valid condition structure (no conflicting conditions, e.g., repository_name and repository_id together)
-  if (conditions) {
-    const hasRepositoryName = !!conditions.repository_name
-    const hasRepositoryId = !!conditions.repository_id
-    const hasRepositoryProperty = !!conditions.repository_property
+  // Dynamically check and assign conditions based on type
+  if (ruleset.conditions) {
+    if (ruleset.conditions.ref_name) {
+      conditions.ref_name = ruleset.conditions.ref_name
+    }
 
-    if (
-      (hasRepositoryName && hasRepositoryId) ||
-      (hasRepositoryName && hasRepositoryProperty) ||
-      (hasRepositoryId && hasRepositoryProperty)
-    ) {
-      throw new Error(
-        'Only one condition type (repository_name, repository_id, or repository_property) is allowed at a time'
-      )
+    if (hasRepositoryNameCondition(ruleset.conditions)) {
+      conditions.repository_name = ruleset.conditions.repository_name
+    }
+
+    if (hasRepositoryIdCondition(ruleset.conditions)) {
+      conditions.repository_id = ruleset.conditions.repository_id
+    }
+
+    if (hasRepositoryPropertyCondition(ruleset.conditions)) {
+      conditions.repository_property = ruleset.conditions.repository_property
     }
   }
 
+  // Ensure valid condition structure (no conflicting conditions, e.g., repository_name and repository_id together)
+  const hasRepositoryName = hasRepositoryNameCondition(conditions)
+  const hasRepositoryId = hasRepositoryIdCondition(conditions)
+  const hasRepositoryProperty = hasRepositoryPropertyCondition(conditions)
+
+  if (
+    (hasRepositoryName && hasRepositoryId) ||
+    (hasRepositoryName && hasRepositoryProperty) ||
+    (hasRepositoryId && hasRepositoryProperty)
+  ) {
+    throw new Error(
+      'Only one condition type (repository_name, repository_id, or repository_property) is allowed at a time'
+    )
+  }
+
+  // Create a new object that matches the expected type
   const updateParams: RulesetUpdate = {
     org,
     ruleset_id: rulesetId,
@@ -82,9 +118,6 @@ async function updateRuleset(
     conditions,
     rules: ruleset.rules
   }
-
-  // Optionally log for debugging
-  core.info(`Update Params: ${JSON.stringify(updateParams, null, 2)}`)
 
   const response = await octokit.request(
     'PUT /orgs/{org}/rulesets/{ruleset_id}',
