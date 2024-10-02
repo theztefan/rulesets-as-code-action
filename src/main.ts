@@ -49,11 +49,29 @@ async function updateRuleset(
   // and merge default conditions with the ruleset conditions
   const defaultConditions = {
     ref_name: { include: [], exclude: [] },
-    repository_property: { include: [], exclude: [] }
+    repository_property: { include: [], exclude: [] },
+    repository_name: { include: [], exclude: [] },
+    repository_id: { repository_ids: [] }
   }
   const conditions = { ...defaultConditions, ...ruleset.conditions }
 
-  // Create a new object that matches the expected type
+  // Ensure valid condition structure (no conflicting conditions, e.g., repository_name and repository_id together)
+  if (conditions) {
+    const hasRepositoryName = !!conditions.repository_name
+    const hasRepositoryId = !!conditions.repository_id
+    const hasRepositoryProperty = !!conditions.repository_property
+
+    if (
+      (hasRepositoryName && hasRepositoryId) ||
+      (hasRepositoryName && hasRepositoryProperty) ||
+      (hasRepositoryId && hasRepositoryProperty)
+    ) {
+      throw new Error(
+        'Only one condition type (repository_name, repository_id, or repository_property) is allowed at a time'
+      )
+    }
+  }
+
   const updateParams: RulesetUpdate = {
     org,
     ruleset_id: rulesetId,
@@ -64,6 +82,9 @@ async function updateRuleset(
     conditions,
     rules: ruleset.rules
   }
+
+  // Optionally log for debugging
+  core.info(`Update Params: ${JSON.stringify(updateParams, null, 2)}`)
 
   const response = await octokit.request(
     'PUT /orgs/{org}/rulesets/{ruleset_id}',
